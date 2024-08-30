@@ -1,0 +1,50 @@
+C51 COMPILER V8.12   TMR_PROGRAM                                                           12/30/2023 10:38:50 PAGE 1   
+
+
+C51 COMPILER V8.12, COMPILATION OF MODULE TMR_PROGRAM
+OBJECT MODULE PLACED IN TMR_program.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE TMR_program.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "TMR_interface.h"
+   2          
+   3          void TMR_init()
+   4          {
+   5   1              TMOD = 0x01;
+   6   1      }
+   7          
+   8          void TMR_delay(char PreloadValue_H, char PreloadValue_L, char No_Iterations)
+   9          {
+  10   1              char i = 0;
+  11   1              for (i = 0; i < No_Iterations; i++)
+  12   1              {
+  13   2                      //Load The timer 
+  14   2                      TL0 = PreloadValue_L;
+  15   2                      TH0 = PreloadValue_H;
+  16   2      
+  17   2                      //start TMR0
+  18   2                      TR0 = 1;
+  19   2                      while (TF0 != 1);
+  20   2                      //stop TMRo
+  21   2                      TR0 = 0;
+  22   2                      //clear TF0
+  23   2                      TF0 = 0;
+  24   2              }
+  25   1      
+  26   1      
+  27   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     34    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,111 @@
+C51 COMPILER V8.12   MAIN                                                                  12/30/2023 18:41:55 PAGE 1   
+
+
+C51 COMPILER V8.12, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <REG52.H>                
+   2          #include <stdio.h>                
+   3          #include "datatypes.h"
+   4          #include "DES.h"
+   5          #include "UART.h"
+   6          
+   7          /*
+   8          **************************************
+   9          *                                               VARIABLES
+  10          **************************************
+  11          */
+  12          
+  13          
+  14          #define INT0_INTERUPT_INDEX 0
+  15          unsigned int i;
+  16          unsigned char Key_was_set = 0;
+  17          volatile unsigned char cipher_was_set = 0;
+  18          volatile signed char counter = -1;
+  19          unsigned char Key[8];
+  20          unsigned char Plain_Text[8];
+  21          unsigned char Cipher_Text[8];
+  22          sbit INT_BIT = P3^2;
+  23          
+  24          
+  25          
+  26          /*
+  27          **************************************
+  28          *                                                MAIN
+  29          **************************************
+  30          */
+  31          
+  32          void main (void)
+  33          {
+  34   1              P2 = 0xFF;                // Set P2.1 to 0 (clear the bit)
+  35   1              INT_BIT = 1;
+  36   1          EA = 1;           // Enable global interrupts
+  37   1          EX0 = 1;          // Enable external interrupt 0 (INT0)
+  38   1          IT0 = 1;          // Set INT0 to be edge-triggered (falling edge)
+  39   1      
+  40   1      
+  41   1              uart_init();
+  42   1          uart_string("welcome");
+  43   1      
+  44   1              uart_string("\rEnter Key: ");
+  45   1              for(i = 0; i < 8; i++){
+  46   2                      unsigned char x = uart_rx();
+  47   2                      Key[i] = x;
+  48   2              }
+  49   1              Key_was_set = 1;
+  50   1              uart_string("\rKey was set ! ");
+  51   1              uart_string("\r");
+  52   1      
+  53   1          while (1)
+  54   1          {
+  55   2                      if(cipher_was_set && Key_was_set){
+C51 COMPILER V8.12   MAIN                                                                  12/30/2023 18:41:55 PAGE 2   
+
+  56   3                              uart_string("\rCipher_Text Received Is: ");
+  57   3                              for(i = 0; i < 8; i++){
+  58   4                                      uart_data(Cipher_Text[i]);
+  59   4                              }
+  60   3                              decrypt(Plain_Text , Cipher_Text , Key);
+  61   3      
+  62   3                              uart_string("\rPlain Text is: ");
+  63   3                              for(i = 0; i < 8; i++){
+  64   4                                      uart_data(Plain_Text[i]);
+  65   4                              }
+  66   3                              cipher_was_set = 0;
+  67   3                              uart_string("\r");
+  68   3                      }       
+  69   2          }
+  70   1      }
+  71          
+  72          
+  73          void INT_ISR() interrupt INT0_INTERUPT_INDEX {
+  74   1              if (counter == -1)
+  75   1              {counter++;}
+  76   1              else
+  77   1              {
+  78   2              Cipher_Text[counter] = P2;
+  79   2              counter++;
+  80   2              if(counter == 8)
+  81   2              {
+  82   3                      cipher_was_set = 1;
+  83   3                      counter = -1;
+  84   3              }
+  85   2              }                   
+  86   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    283    ----
+   CONSTANT SIZE    =     83    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     29       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

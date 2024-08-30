@@ -1,0 +1,532 @@
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 1   
+
+
+C51 COMPILER V8.12, COMPILATION OF MODULE DES
+OBJECT MODULE PLACED IN DES.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE DES.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "DES.h"
+   2          #include "uart.h"
+   3          
+   4          /*
+   5          **********************************************************************************************************
+             -****
+   6          *                                               VARIABLES
+   7          **********************************************************************************************************
+             -****
+   8          */
+   9          
+  10          
+  11          
+  12          // S-Box
+  13          // Each value represents 4 bits that the 6-bit input is mapped to.
+  14          //
+  15          // This is in a different order than you would normally find it in an DES
+  16          // reference, so that the sbox lookup is reduced to a single lookup on the
+  17          // input byte.
+  18          code const uint8_t sbox[256]  =
+  19          {
+  20              /* S-box 1 */
+  21              0xE4, 0xD1, 0x2F, 0xB8, 0x3A, 0x6C, 0x59, 0x07,
+  22              0x0F, 0x74, 0xE2, 0xD1, 0xA6, 0xCB, 0x95, 0x38,
+  23              0x41, 0xE8, 0xD6, 0x2B, 0xFC, 0x97, 0x3A, 0x50,
+  24              0xFC, 0x82, 0x49, 0x17, 0x5B, 0x3E, 0xA0, 0x6D,
+  25              /* S-box 2 */
+  26              0xF1, 0x8E, 0x6B, 0x34, 0x97, 0x2D, 0xC0, 0x5A,
+  27              0x3D, 0x47, 0xF2, 0x8E, 0xC0, 0x1A, 0x69, 0xB5,
+  28              0x0E, 0x7B, 0xA4, 0xD1, 0x58, 0xC6, 0x93, 0x2F,
+  29              0xD8, 0xA1, 0x3F, 0x42, 0xB6, 0x7C, 0x05, 0xE9,
+  30              /* S-box 3 */
+  31              0xA0, 0x9E, 0x63, 0xF5, 0x1D, 0xC7, 0xB4, 0x28,
+  32              0xD7, 0x09, 0x34, 0x6A, 0x28, 0x5E, 0xCB, 0xF1,
+  33              0xD6, 0x49, 0x8F, 0x30, 0xB1, 0x2C, 0x5A, 0xE7,
+  34              0x1A, 0xD0, 0x69, 0x87, 0x4F, 0xE3, 0xB5, 0x2C,
+  35              /* S-box 4 */
+  36              0x7D, 0xE3, 0x06, 0x9A, 0x12, 0x85, 0xBC, 0x4F,
+  37              0xD8, 0xB5, 0x6F, 0x03, 0x47, 0x2C, 0x1A, 0xE9,
+  38              0xA6, 0x90, 0xCB, 0x7D, 0xF1, 0x3E, 0x52, 0x84,
+  39              0x3F, 0x06, 0xA1, 0xD8, 0x94, 0x5B, 0xC7, 0x2E,
+  40              /* S-box 5 */
+  41              0x2C, 0x41, 0x7A, 0xB6, 0x85, 0x3F, 0xD0, 0xE9,
+  42              0xEB, 0x2C, 0x47, 0xD1, 0x50, 0xFA, 0x39, 0x86,
+  43              0x42, 0x1B, 0xAD, 0x78, 0xF9, 0xC5, 0x63, 0x0E,
+  44              0xB8, 0xC7, 0x1E, 0x2D, 0x6F, 0x09, 0xA4, 0x53,
+  45              /* S-box 6 */
+  46              0xC1, 0xAF, 0x92, 0x68, 0x0D, 0x34, 0xE7, 0x5B,
+  47              0xAF, 0x42, 0x7C, 0x95, 0x61, 0xDE, 0x0B, 0x38,
+  48              0x9E, 0xF5, 0x28, 0xC3, 0x70, 0x4A, 0x1D, 0xB6,
+  49              0x43, 0x2C, 0x95, 0xFA, 0xBE, 0x17, 0x60, 0x8D,
+  50              /* S-box 7 */
+  51              0x4B, 0x2E, 0xF0, 0x8D, 0x3C, 0x97, 0x5A, 0x61,
+  52              0xD0, 0xB7, 0x49, 0x1A, 0xE3, 0x5C, 0x2F, 0x86,
+  53              0x14, 0xBD, 0xC3, 0x7E, 0xAF, 0x68, 0x05, 0x92,
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 2   
+
+  54              0x6B, 0xD8, 0x14, 0xA7, 0x95, 0x0F, 0xE2, 0x3C,
+  55              /* S-box 8 */
+  56              0xD2, 0x84, 0x6F, 0xB1, 0xA9, 0x3E, 0x50, 0xC7,
+  57              0x1F, 0xD8, 0xA3, 0x74, 0xC5, 0x6B, 0x0E, 0x92,
+  58              0x7B, 0x41, 0x9C, 0xE2, 0x06, 0xAD, 0xF3, 0x58,
+  59              0x21, 0xE7, 0x4A, 0x8D, 0xFC, 0x90, 0x35, 0x6B
+  60          };
+  61          
+  62          // Applied to the half-block at the beginning of the Fiestel function.
+  63          //expansion_permutation
+  64          code const uint8_t e_permtab[]  =
+  65          {
+  66              4,  6,                                         /* 4 bytes in 6 bytes out*/
+  67              32,  1,  2,  3,  4,  5,
+  68              4,  5,  6,  7,  8,  9,
+  69              8,  9, 10, 11, 12, 13,
+  70              12, 13, 14, 15, 16, 17,
+  71              16, 17, 18, 19, 20, 21,
+  72              20, 21, 22, 23, 24, 25,
+  73              24, 25, 26, 27, 28, 29,
+  74              28, 29, 30, 31, 32,  1
+  75          };
+  76          
+  77          // Applied at the end of the Feistel function.
+  78          code const uint8_t p_permtab[]  =
+  79          {
+  80              4,  4,                                         /* 32 bit -> 32 bit */
+  81              16,  7, 20, 21,
+  82              29, 12, 28, 17,
+  83              1, 15, 23, 26,
+  84              5, 18, 31, 10,
+  85              2,  8, 24, 14,
+  86              32, 27,  3,  9,
+  87              19, 13, 30,  6,
+  88              22, 11,  4, 25
+  89          };
+  90          
+  91          // Applied once at the beginning of the algorithm.
+  92          code const uint8_t ip_permtab[]  =
+  93          {
+  94              8,  8,                                         /* 64 bit -> 64 bit */
+  95              //initial_permutation_left
+  96              58, 50, 42, 34, 26, 18, 10, 2,
+  97              60, 52, 44, 36, 28, 20, 12, 4,
+  98              62, 54, 46, 38, 30, 22, 14, 6,
+  99              64, 56, 48, 40, 32, 24, 16, 8,
+ 100              //initial_permutation_right
+ 101              57, 49, 41, 33, 25, 17,  9, 1,
+ 102              59, 51, 43, 35, 27, 19, 11, 3,
+ 103              61, 53, 45, 37, 29, 21, 13, 5,
+ 104              63, 55, 47, 39, 31, 23, 15, 7
+ 105          };
+ 106          
+ 107          code const uint8_t inv_ip_permtab[]  =
+ 108          {
+ 109              8, 8,                                          /* 64 bit -> 64 bit */
+ 110              40, 8, 48, 16, 56, 24, 64, 32,
+ 111              39, 7, 47, 15, 55, 23, 63, 31,
+ 112              38, 6, 46, 14, 54, 22, 62, 30,
+ 113              37, 5, 45, 13, 53, 21, 61, 29,
+ 114              36, 4, 44, 12, 52, 20, 60, 28,
+ 115              35, 3, 43, 11, 51, 19, 59, 27,
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 3   
+
+ 116              34, 2, 42, 10, 50, 18, 58, 26,
+ 117              33, 1, 41,  9, 49, 17, 57, 25
+ 118          };
+ 119          
+ 120          // Converts from full 64-bit key to two key halves: left and right.  Only 48
+ 121          // bits from the original key are used.
+ 122          code const uint8_t pc1_permtab[]  =
+ 123          {
+ 124              8,  7,                                         /* 64 bit -> 56 bit*/
+ 125              // Left Half
+ 126              57, 49, 41, 33, 25, 17,  9,
+ 127              1, 58, 50, 42, 34, 26, 18,
+ 128              10,  2, 59, 51, 43, 35, 27,
+ 129              19, 11,  3, 60, 52, 44, 36,
+ 130              // Right Half
+ 131              63, 55, 47, 39, 31, 23, 15,
+ 132              7, 62, 54, 46, 38, 30, 22,
+ 133              14,  6, 61, 53, 45, 37, 29,
+ 134              21, 13,  5, 28, 20, 12,  4
+ 135          };
+ 136          
+ 137          // Converts the shifted right and left key halves (concatenated together) into
+ 138          // the subkey for the round (input into Feistel function).
+ 139          code const uint8_t pc2_permtab[]  =
+ 140          {
+ 141              7,      6,                                     /* 56 bit -> 48 bit */
+ 142              14, 17, 11, 24,  1,  5,
+ 143              3, 28, 15,  6, 21, 10,
+ 144              23, 19, 12,  4, 26,  8,
+ 145              16,  7, 27, 20, 13,  2,
+ 146              41, 52, 31, 37, 47, 55,
+ 147              30, 40, 51, 45, 33, 48,
+ 148              44, 49, 39, 56, 34, 53,
+ 149              46, 42, 50, 36, 29, 32
+ 150          };
+ 151          
+ 152          code const uint8_t splitin6bitword_permtab[]  =
+ 153          {
+ 154              8,  8,                                         /* 64 bit -> 64 bit */
+ 155              64, 64,  1,  6,  2,  3,  4,  5,
+ 156              64, 64,  7, 12,  8,  9, 10, 11,
+ 157              64, 64, 13, 18, 14, 15, 16, 17,
+ 158              64, 64, 19, 24, 20, 21, 22, 23,
+ 159              64, 64, 25, 30, 26, 27, 28, 29,
+ 160              64, 64, 31, 36, 32, 33, 34, 35,
+ 161              64, 64, 37, 42, 38, 39, 40, 41,
+ 162              64, 64, 43, 48, 44, 45, 46, 47
+ 163          };
+ 164          
+ 165          code const uint8_t shiftkey_permtab[]  =
+ 166          {
+ 167              7,  7,                                         /* 56 bit -> 56 bit */
+ 168              2,  3,  4,  5,  6,  7,  8,  9,
+ 169              10, 11, 12, 13, 14, 15, 16, 17,
+ 170              18, 19, 20, 21, 22, 23, 24, 25,
+ 171              26, 27, 28,  1,
+ 172              30, 31, 32, 33, 34, 35, 36, 37,
+ 173              38, 39, 40, 41, 42, 43, 44, 45,
+ 174              46, 47, 48, 49, 50, 51, 52, 53,
+ 175              54, 55, 56, 29
+ 176          };
+ 177          
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 4   
+
+ 178          code const uint8_t shiftkeyinv_permtab[]  =
+ 179          {
+ 180              7,  7,
+ 181              28,  1,  2,  3,  4,  5,  6,  7,
+ 182              8,  9, 10, 11, 12, 13, 14, 15,
+ 183              16, 17, 18, 19, 20, 21, 22, 23,
+ 184              24, 25, 26, 27,
+ 185              56, 29, 30, 31, 32, 33, 34, 35,
+ 186              36, 37, 38, 39, 40, 41, 42, 43,
+ 187              44, 45, 46, 47, 48, 49, 50, 51,
+ 188              52, 53, 54, 55
+ 189          };
+ 190          
+ 191          code const uint8_t encrypt_rounds[17] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
+ 192          code const uint8_t decrypt_rounds[17] = {0 , 1 , 2 , 2 , 2 , 2 , 2 , 2 , 1 , 2 , 2 , 2 , 2 , 2 , 2 , 1};
+ 193          
+ 194          #define ROTTABLE      0x7EFC
+ 195          #define ROTTABLE_INV  0x3F7E
+ 196          
+ 197          /*$PAGE*/
+ 198          /*
+ 199          *********************************************************************************************************
+ 200          *                                              Permute data
+ 201          *
+ 202          * Description: This function is used to obtain the permuted data "out" from input data "in" by table "ptab
+             -le"
+ 203          *
+ 204          * Arguments  : ptable   is a pointer to the permutaion table to be used.
+ 205          *              Note     ptable is pointer to a different size array, the first of two element has the size
+ 206          *                       of array ,the other element is the permuted data incremented by 1 from the standar
+             -d
+ 207          *
+ 208          *              in       is a pointer that holds the data before the permutations.
+ 209          *
+ 210          *              out      is a pointer that holds the data after the permutation.
+ 211          *
+ 212          * Returns    : None     the output is inside the out pointer
+ 213          *
+ 214          * Note(s)    :          we take number from ptable to permute bits of "in" with this
+ 215          *                       example
+ 216          *                       ptable[3] = 57, so we want to take bit number 57 from data "in"
+ 217          *                       but "in" described by 8 bytes, so to get the selective by in in[x/8]
+ 218          *                       and get the selective bit by (x%8)
+ 219          *********************************************************************************************************
+ 220          */
+ 221          void permute(const uint8_t *ptable, const uint8_t *in, uint8_t *out) reentrant
+ 222          {
+ 223   1          uint8_t ob;         /* in-bytes and out-bytes */
+ 224   1          uint8_t byte, _bit;  /* counter for bit and byte */
+ 225   1          ob = ptable[1];     /* take number of bytes from the 2st element for the table , number of out bytes*/
+ 226   1          ptable = &ptable[2];            /* ptable pointed to the 3rd element */
+ 227   1          for(byte=0; byte<ob; byte++)
+ 228   1          {
+ 229   2              uint8_t x,t=0;
+ 230   2              for(_bit=0; _bit<8; ++_bit)
+ 231   2              {
+ 232   3                  x = *ptable++ -1 ;      /* decrement table content by 1 for the standard  */
+ 233   3                  t <<= 1;                /* select next bit  */
+ 234   3                  if((in[x/8]) & (0x80>>(x%8)) )
+ 235   3                  {
+ 236   4                      t|=0x01;
+ 237   4                  }
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 5   
+
+ 238   3              }
+ 239   2              out[byte]=t;
+ 240   2          }
+ 241   1      }
+ 242          
+ 243          /*$PAGE*/
+ 244          /*
+ 245          *********************************************************************************************************
+ 246          *                                              shift key
+ 247          *
+ 248          * Description: This function is used to shift key by permute it from the permtab
+ 249          *
+ 250          * Arguments  : key is a pointer to the key (54 bit = 7 byte) to be shifted
+ 251          *
+ 252          * Returns    : None     the output is inside the key pointer
+ 253          *********************************************************************************************************
+ 254          */
+ 255          void shiftkey(uint8_t *key) reentrant
+ 256          {
+ 257   1          uint8_t k[7];
+ 258   1          memcpy(k, key, 7);                              /* copy the content of array "key" in array "k"  */
+ 259   1          permute((uint8_t*)shiftkey_permtab, k, key);    /* Shift bytes circularly. */
+ 260   1      }
+ 261          
+ 262          /*$PAGE*/
+ 263          /*
+ 264          *********************************************************************************************************
+ 265          *                                              shift key inverting
+ 266          *
+ 267          * Description: This function is used to shift key back by permute it from the permtab
+ 268          *
+ 269          * Arguments  : key is a pointer to the key (54 bit = 7 byte) to be shifted
+ 270          *
+ 271          * Returns    : None     the output is inside the key pointer
+ 272          *********************************************************************************************************
+ 273          */
+ 274          void shiftkey_inv(uint8_t *key) reentrant
+ 275          {
+ 276   1          uint8_t k[7];
+ 277   1          memcpy(k, key, 7);
+ 278   1          permute((uint8_t*)shiftkeyinv_permtab, k, key);
+ 279   1      }
+ 280          
+ 281          /*$PAGE*/
+ 282          /*
+ 283          *********************************************************************************************************
+ 284          *                                              split in 6 bit words
+ 285          *
+ 286          * Description: This function is used to split every 6bit in a byte to use it with S-Box, so this function
+ 287          *              make data from char data[6]-48bit  to data[8]-64bit
+ 288          *
+ 289          * Arguments  : a        is a pointer to uint64_t that contain content of data[6byte].
+ 290          *
+ 291          * Returns    : uint64_t this function return a spliced data[8byte]
+ 292          *********************************************************************************************************
+ 293          */
+ 294          void splitin6bitwords(unsigned char a[]) reentrant
+ 295          {
+ 296   1          uint8_t ret[8];
+ 297   1          memcpy(ret, a, 8);
+ 298   1          permute((uint8_t*)splitin6bitword_permtab, ret, a);
+ 299   1      }
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 6   
+
+ 300          
+ 301          /*$PAGE*/
+ 302          /*
+ 303          *********************************************************************************************************
+ 304          *                                              substitute
+ 305          *
+ 306          * Description: This function is used to substitute 6 bits to 4 bits by s-box where 1st and 6th bits
+ 307          *              represent row and 2nd,3rd,4th,5th bits represent the columns
+ 308          *
+ 309          * Arguments  : a        is a pointer to array of char[64] that contain the data want to be substituted
+ 310          *                       ,array position.
+ 311          *
+ 312          *              sbp      is a pointer to array of char[256] S-Box that contain the table of data for
+ 313          *                       substitution.
+ 314          *
+ 315          * Returns    : uint32_t this function return the substituted byte
+ 316          *********************************************************************************************************
+ 317          */
+ 318          uint8_t substitute(uint8_t a, uint8_t * sbp) reentrant
+ 319          {
+ 320   1          uint8_t x;
+ 321   1          x = sbp[a>>1];                  /* get the substituted data from S-Box */
+ 322   1          x = (a&1)?x&0x0F:x>>4;          /* depend on 1st bit, we select LSB or MSB */
+ 323   1          return x;
+ 324   1      }
+ 325          
+ 326          /*$PAGE*/
+ 327          /*
+ 328          *********************************************************************************************************
+ 329          *                                   DES Feistel"Primary function of DES"
+ 330          *
+ 331          * Description: This function is used to apply the Feistel function on right block with key and return
+ 332          *              the result.
+ 333          *              note:    Used in encryption and decryption process.
+ 334          *
+ 335          * Arguments  : r        is a pointer to array of char[4] that contain the data right block.
+ 336          *
+ 337          *              kr       is a pointer to array of char[4] that contain the data key.
+ 338          *
+ 339          * Returns    : uint32_t this function return the result of DES Feistel function [32bit]
+ 340          *********************************************************************************************************
+ 341          */
+ 342          uint32_t des_f(uint32_t r, uint8_t* kr) reentrant
+ 343          {
+ 344   1          uint8_t i;
+ 345   1          uint32_t t=0,ret;
+ 346   1          uint64_t _data;
+ 347   1          uint8_t *sbp; /* sboxpointer */
+ 348   1      
+ 349   1          permute((uint8_t*)e_permtab, (uint8_t*)&r, (uint8_t*)&_data);/* Permute EP "Expansion Permutation" tab
+             -le with
+ 350   1                                          input data [right block] "r" and return permuted data in "data[48bit]"
+             - */
+ 351   1          for(i=0; i<7; ++i)
+ 352   1              ((uint8_t*)&_data)[i] ^= kr[i];      /* XORing data [right block] with key [48bit]*/
+ 353   1      
+ 354   1          /* Sbox substitution */
+ 355   1          splitin6bitwords((uint8_t*)&_data);          /* data before 6-byte --> now 8-byte  */
+ 356   1          sbp=(uint8_t*)sbox;
+ 357   1          for(i=0; i<8; ++i)
+ 358   1          {
+ 359   2              uint8_t x;
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 7   
+
+ 360   2              x = substitute(((uint8_t*)&_data)[i], sbp);
+ 361   2              t <<= 4;
+ 362   2              t |= x;
+ 363   2              sbp += 32;
+ 364   2          }
+ 365   1      
+ 366   1          permute((uint8_t*)p_permtab,(uint8_t*)&t, (uint8_t*)&ret);
+ 367   1      
+ 368   1          return ret;
+ 369   1      }
+ 370          
+ 371          /*$PAGE*/
+ 372          /*
+ 373          *********************************************************************************************************
+ 374          *                                      Encryption function
+ 375          *
+ 376          * Description:            This function encrypts a block of 64 bits (8 bytes) with the DES algorithm.
+ 377          *                     Key expansion is done automatically. The key is 64 bits long, but note that
+ 378          *                     only 56 bits are used (the LSB of each byte is dropped). The input and output
+ 379          *                     blocks may overlap.
+ 380          *
+ 381          * Arguments  : out    pointer to the block (64 bit = 8 byte) where the ciphertext is written to
+ 382          *
+ 383          *              in     pointer to the block (64 bit = 8 byte) where the plaintext is read from
+ 384          *
+ 385          *              key    pointer to the key (64 bit = 8 byte)
+ 386          *
+ 387          * Returns    : None
+ 388          *********************************************************************************************************
+ 389          */
+ 390          void encrypt(void* out, const void* in, const void* key) reentrant
+ 391          {
+ 392   1      #define R (_data.v32[1])
+ 393   1      #define L (_data.v32[0])
+ 394   1          uint8_t kr[6],k[7];
+ 395   1          uint8_t i;
+ 396   1              uint32_t temp;
+ 397   1          union
+ 398   1          {
+ 399   1              uint8_t v8[8];
+ 400   1              uint32_t v32[2];
+ 401   1          } _data;
+ 402   1      
+ 403   1          permute((uint8_t*)ip_permtab, (uint8_t*)in, _data.v8);   /* Permute IP "Initial Permutation" table wit
+             -h
+ 404   1                                                                  input data and return permuted data in "v8" */
+ 405   1          permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k); /* Permute PC1 "Permuted_Choice1" table with
+ 406   1                                                                  input key and return permuted data in "k" */
+ 407   1          for(i=0; i<16; i++)
+ 408   1          {
+ 409   2              shiftkey(k);
+ 410   2      
+ 411   2              if(encrypt_rounds[i] == 2)
+ 412   2                      {          
+ 413   3                  shiftkey(k);
+ 414   3                      }
+ 415   2              permute((uint8_t*)pc2_permtab, k, kr);
+ 416   2              L ^= des_f(R, kr);
+ 417   2                      
+ 418   2                      temp = L;
+ 419   2                      L = R;
+ 420   2                      R = temp;
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 8   
+
+ 421   2          }
+ 422   1          /* L <-> R*/
+ 423   1          R ^= L;
+ 424   1          L ^= R;
+ 425   1          R ^= L;
+ 426   1      
+ 427   1          // Switch back left and right block
+ 428   1          permute((uint8_t*)inv_ip_permtab, _data.v8, (uint8_t*)out);
+ 429   1      }
+ 430          
+ 431          
+ 432          
+ 433          
+ 434          
+ 435          void decrypt(void* out, const void* in, const uint8_t* key) reentrant
+ 436          {
+ 437   1      #define R (_data.v32[1])
+ 438   1      #define L (_data.v32[0])
+ 439   1              
+ 440   1              uint8_t i;
+ 441   1              uint32_t temp;
+ 442   1          uint8_t kr[6],k[7];
+ 443   1      
+ 444   1          union
+ 445   1          {
+ 446   1              uint8_t v8[8];
+ 447   1              uint32_t v32[2];
+ 448   1          } _data;
+ 449   1          
+ 450   1          permute((uint8_t*)ip_permtab, (uint8_t*)in, _data.v8);/* Permute IP "Initial Permutation" table with
+ 451   1                                                                  input data and return permuted data in "v8" */
+ 452   1          permute((uint8_t*)pc1_permtab, (const uint8_t*)key, k);/* Permute PC1 "Permuted_Choice1" table with
+ 453   1                                                                  input key and return permuted data in "k" */
+ 454   1      
+ 455   1      
+ 456   1              for(i = 0 ; i < 16 ; i++)
+ 457   1              {
+ 458   2                      if(decrypt_rounds[i] == 0)
+ 459   2                      {
+ 460   3                              
+ 461   3                      }
+ 462   2                      else if (decrypt_rounds[i] == 1)
+ 463   2                      {
+ 464   3                              shiftkey_inv(k);        
+ 465   3                      }
+ 466   2                      else if (decrypt_rounds[i] == 2)
+ 467   2                      {
+ 468   3                              shiftkey_inv(k);
+ 469   3                              shiftkey_inv(k);
+ 470   3                                      
+ 471   3                      }
+ 472   2                      permute((uint8_t*)pc2_permtab, k, kr);
+ 473   2                      L ^= des_f(R, kr);
+ 474   2      
+ 475   2                      temp = L;
+ 476   2                      L = R;
+ 477   2                      R = temp;       
+ 478   2              }
+ 479   1                                          
+ 480   1          /* L <-> R*/
+ 481   1          R ^= L;
+ 482   1          L ^= R;
+C51 COMPILER V8.12   DES                                                                   12/30/2023 18:41:55 PAGE 9   
+
+ 483   1          R ^= L;
+ 484   1          permute((uint8_t*)inv_ip_permtab, _data.v8, (uint8_t*)out);
+ 485   1      }
+ 486                                           
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2044    ----
+   CONSTANT SIZE    =    796    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

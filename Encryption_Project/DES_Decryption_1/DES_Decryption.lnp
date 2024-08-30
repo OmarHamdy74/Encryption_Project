@@ -1,0 +1,5 @@
+"DES.obj",
+"main.obj",
+"UART.obj" 
+TO "DES_Decryption" 
+RAMSIZE(256) 

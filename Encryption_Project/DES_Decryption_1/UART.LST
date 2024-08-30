@@ -1,0 +1,138 @@
+C51 COMPILER V8.12   UART                                                                  12/30/2023 18:41:55 PAGE 1   
+
+
+C51 COMPILER V8.12, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN UART.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE UART.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "UART.h"
+   2          //#include "stdbool.h"
+   3          //#include "stdint.h"
+   4          
+   5          /*$PAGE*/
+   6          /*
+   7          *********************************************************************************************************
+   8          *                                      UART initialization
+   9          *
+  10          * Description: This function use to enable UART peripheral and set the parameters.
+  11          *                          Setup the serial port for 9600 baud at 11.0592MHz.
+  12          *
+  13          * Arguments  : None
+  14          *
+  15          * Returns    : None
+  16          *********************************************************************************************************
+  17          */
+  18          void uart_init()
+  19          {
+  20   1          TMOD |= 0x20;               /* TMOD: timer 1, mode 2, 8-bit reload        */
+  21   1          SCON  = 0x50;                       /* SCON: mode 1, 8-bit UART, enable rcvr      */
+  22   1          TH1   = 0xFD;               /* TH1:  reload value for 9600 baud @ 11.0592MHz   */
+  23   1          TR1   = 1;                  /* TR1:  timer 1 run                          */
+  24   1      }
+  25          
+  26          /*$PAGE*/
+  27          /*
+  28          *********************************************************************************************************
+  29          *                                      UART send data
+  30          *
+  31          * Description: This function use to send passed data via UART peripheral.
+  32          *
+  33          * Arguments  : mad              is a character will send in Tx pin.
+  34          *
+  35          * Returns    : None
+  36          *********************************************************************************************************
+  37          */
+  38          void uart_data(unsigned char mad)
+  39          {
+  40   1          SBUF=mad;
+  41   1          while(TI==0);
+  42   1          TI=0;
+  43   1      }
+  44          
+  45          /*$PAGE*/
+  46          /*
+  47          *********************************************************************************************************
+  48          *                                      UART send string
+  49          *
+  50          * Description: This function use to send array of char via UART peripheral.
+  51          *
+  52          * Arguments  : mad              is a point to the 1st element of string.
+  53          *
+  54          * Returns    : None
+  55          *********************************************************************************************************
+C51 COMPILER V8.12   UART                                                                  12/30/2023 18:41:55 PAGE 2   
+
+  56          */
+  57          void uart_string(unsigned char mad[])
+  58          {
+  59   1          unsigned int j;
+  60   1      
+  61   1          for(j=0; mad[j]!='\0'; j++)
+  62   1              uart_data(mad[j]);
+  63   1      }
+  64          
+  65          /*$PAGE*/
+  66          /*
+  67          *********************************************************************************************************
+  68          *                                      UART get data
+  69          *
+  70          * Description: This function use to data from UART peripheral
+  71          *
+  72          * Arguments  : None.
+  73          *
+  74          * Returns    : ch          is a character will receive data.
+  75          *********************************************************************************************************
+  76          */
+  77          unsigned char uart_rx()
+  78          {
+  79   1          unsigned char ch;
+  80   1          while(RI==0);
+  81   1          ch=SBUF;
+  82   1          RI = 0;
+  83   1          return (ch);
+  84   1      }
+  85          
+  86          /*$PAGE*/
+  87          /*
+  88          *********************************************************************************************************
+  89          *                                      UART get string
+  90          *
+  91          * Description: This function use to receive data and put it into array of characters
+  92          *
+  93          * Arguments  : None.
+  94          *
+  95          * Returns    : output   is a point to the 1st element of string.
+  96          *********************************************************************************************************
+  97          */
+  98          char* uart_getstring(void) reentrant
+  99          {
+ 100   1          static char output[26];
+ 101   1          char* str = output;
+ 102   1          do
+ 103   1          {
+ 104   2              str++;
+ 105   2              *str = uart_rx();
+ 106   2          }
+ 107   1          while(*str != '\r');
+ 108   1          *str = '\0';
+ 109   1          return output+1;
+ 110   1      }
+ 111          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    141    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+C51 COMPILER V8.12   UART                                                                  12/30/2023 18:41:55 PAGE 3   
+
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     26       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

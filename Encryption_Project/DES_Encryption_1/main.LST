@@ -1,0 +1,97 @@
+C51 COMPILER V8.12   MAIN                                                                  12/30/2023 10:38:49 PAGE 1   
+
+
+C51 COMPILER V8.12, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <REG52.H>                
+   2          #include <stdio.h>                
+   3          #include "datatypes.h"
+   4          #include "DES.h"
+   5          #include "UART.h"
+   6          #include "TMR_interface.h"
+   7          
+   8          /*
+   9          **************************************
+  10          *                                               VARIABLES
+  11          **************************************
+  12          */
+  13          unsigned int i;
+  14          unsigned char Key[8];
+  15          unsigned char Plain_Text[8];
+  16          unsigned char temp[8];
+  17          unsigned char Cipher_Text[8];
+  18          sbit INT_BIT = P1^0;
+  19          
+  20          /*
+  21          **************************************
+  22          *                                                MAIN
+  23          **************************************
+  24          */
+  25          
+  26          void main (void)
+  27          {
+  28   1              TMR_init();
+  29   1          uart_init();
+  30   1          uart_string("welcome");
+  31   1      
+  32   1              P2 = 0x00;                // Set P2.1 to 0 (clear the bit)
+  33   1              P1 = 0x00;  
+  34   1              P1 &= ~(1 << 0);
+  35   1      
+  36   1      
+  37   1              uart_string("\rEnter Key: ");
+  38   1              for(i = 0; i < 8; i++){
+  39   2                      unsigned char x = uart_rx();
+  40   2                      Key[i] = x;
+  41   2              }
+  42   1              uart_string("\r");
+  43   1      
+  44   1          while (1)
+  45   1          {
+  46   2                      uart_string("\rEnter Plain_Text: ");
+  47   2                      for(i = 0; i < 8; i++){
+  48   3                              unsigned char x = uart_rx();
+  49   3                              Plain_Text[i] = x;
+  50   3                      }
+  51   2              
+  52   2                      encrypt(Cipher_Text , Plain_Text, Key);
+  53   2      
+  54   2                      uart_string("\rCipher_Text is: ");
+  55   2                      for(i = 0; i < 8; i++){
+C51 COMPILER V8.12   MAIN                                                                  12/30/2023 10:38:49 PAGE 2   
+
+  56   3                              uart_data(Cipher_Text[i]);
+  57   3                      }
+  58   2      
+  59   2                      P2 = 0xFF;
+  60   2                      INT_BIT = 0;
+  61   2                      TMR_delay(0xA5, 0xFF, 5);
+  62   2                      INT_BIT = 1;
+  63   2                      for (i = 0; i < 8; i++)
+  64   2                      {
+  65   3                              P2 = Cipher_Text[i];
+  66   3                              INT_BIT = 0;
+  67   3                              TMR_delay(0xA5, 0xFF, 5);
+  68   3                              INT_BIT = 1;                    
+  69   3                      }                                                                                 
+  70   2                      uart_string("\r");                                                      
+  71   2              }
+  72   1      }       
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    271    ----
+   CONSTANT SIZE    =     61    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     34       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
